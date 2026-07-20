@@ -33,7 +33,7 @@ def update_hist(rgb):
 
 while True:
     strings = []
-    sock.settimeout(0.01)
+    sock.settimeout(0.1)
     sock.sendto(cmd, (CAMERA_IP, CAMERA_PORT))
     for i in range(12):
         data, addr = sock.recvfrom(65535)      # сеть
