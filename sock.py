@@ -22,6 +22,9 @@ need_resize = False
 sleeep = 0
 image_full = []
 
+if not os.path.exists(obj_path):
+    os.mkdir(obj_path)
+
 if not os.path.exists(resized_images_path):
     os.mkdir(resized_images_path)
 
