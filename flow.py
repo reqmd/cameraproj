@@ -22,6 +22,7 @@ TH = np.array([25, 25, 25])        # пороги по каналам
 MIN_FG_PIXELS = 400                 # сколько отклонившихся пикселей в строке = "объект есть"
 GAP_ROWS = 3                       # столько подряд фоновых строк = объект закончился
 MAX_ROWS = 64                    # предохранитель от бесконечного объекта
+ALPHA = 0.01
  
 def read_line():
     strings = []
@@ -91,6 +92,7 @@ while True:
             obj_rows = []
             collecting = False
     else:
+        background = ((1 - ALPHA) * background + ALPHA * row).astype(np.int16)
         if collecting:
             gap += 1
             obj_rows.append(row)              # добавляем и фоновые строки в "хвост"
