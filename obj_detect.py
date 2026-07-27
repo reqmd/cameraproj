@@ -11,8 +11,7 @@ def find_objects(image, image_name, threshhold = [25, 25, 25], need_imshow = Tru
     image = image[0:H, 200:W - 600]
     mask = np.zeros((H, W), dtype=np.uint8)
     background = np.median(image[:20], axis=0).astype(np.int16)
-    with open ('background.yaml', 'w') as file:
-        yaml.safe_dump(background, file)
+    # np.save('background.npy', background)
     
     diff = np.abs(image.astype(np.int16) - background)    
 
