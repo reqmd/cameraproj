@@ -19,7 +19,7 @@ session_name = date.strftime("%d-%m-%Y_%H-%M-%S")
 os.makedirs(f"data/sessions/{session_name}", exist_ok=True)
  
 TH = np.array([25, 25, 25])        # пороги по каналам
-MIN_FG_PIXELS = 400                 # сколько отклонившихся пикселей в строке = "объект есть"
+MIN_FG_PIXELS = 700                 # сколько отклонившихся пикселей в строке = "объект есть"
 GAP_ROWS = 3                       # столько подряд фоновых строк = объект закончился
 MAX_ROWS = 64                    # предохранитель от бесконечного объекта
 ALPHA = 0.01
@@ -83,6 +83,7 @@ while True:
         row = read_line()
     except socket.timeout:
         continue
+        print('ВНИМАНИЕ! ДОЛГИЙ ОТКЛИК ОТ КАМЕРЫ!')
  
     if row_has_object(row):
         obj_rows.append(row)
