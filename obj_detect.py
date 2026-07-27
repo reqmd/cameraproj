@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import os
 import shutil
+import yaml
 
 def find_objects(image, image_name, threshhold = [25, 25, 25], need_imshow = True):
 
@@ -10,6 +11,9 @@ def find_objects(image, image_name, threshhold = [25, 25, 25], need_imshow = Tru
     image = image[0:H, 200:W - 600]
     mask = np.zeros((H, W), dtype=np.uint8)
     background = np.median(image[:20], axis=0).astype(np.int16)
+    with open ('background.yaml', 'w') as file:
+        yaml.safe_dump(background, file)
+    
     diff = np.abs(image.astype(np.int16) - background)    
 
     mask = ((diff[:, :, 0] > r_th) |
