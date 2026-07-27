@@ -4,12 +4,14 @@ import os
 import shutil
 
 def find_objects(image, image_name, threshhold = [25, 25, 25], need_imshow = True):
+    WIDTH = 2716
+    X0, X1 = 175, WIDTH - 1000
     r_th, g_th, b_th = threshhold
     H, W, _ = image.shape
-    image = image[0:H, 200:W - 600]
+    image = image[0:H, X0:X1]
     mask = np.zeros((H, W), dtype=np.uint8)
     background = np.median(image[:20], axis=0).astype(np.int16)
-    # np.save('background.npy', background)
+    np.save('background.npy', background)
     
     diff = np.abs(image.astype(np.int16) - background)    
 

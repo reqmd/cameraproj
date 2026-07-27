@@ -9,8 +9,7 @@ from resize import upscale
 from obj_detect import find_objects
 
 CAMERA_IP   = "192.168.2.101"   
-CAMERA_PORT = 5001             
-
+CAMERA_PORT = 5001    
 cmd = bytes.fromhex("01 00 03 00 00 00 6A 00 00 1F D4 8e 06")
 
 data_path = 'data'

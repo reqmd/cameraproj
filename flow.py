@@ -7,7 +7,7 @@ import os
 CAMERA_IP   = "192.168.2.101"
 CAMERA_PORT = 5001
 WIDTH = 2716
-X0, X1 = 200, WIDTH - 600
+X0, X1 = 175, WIDTH - 1000
  
 cmd = bytes.fromhex("01 00 03 00 00 00 6A 00 00 1F D4 8e 06")
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
