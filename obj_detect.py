@@ -2,10 +2,8 @@ import numpy as np
 import cv2
 import os
 import shutil
-import yaml
 
 def find_objects(image, image_name, threshhold = [25, 25, 25], need_imshow = True):
-
     r_th, g_th, b_th = threshhold
     H, W, _ = image.shape
     image = image[0:H, 200:W - 600]
@@ -48,9 +46,6 @@ def find_objects(image, image_name, threshhold = [25, 25, 25], need_imshow = Tru
         for obj in objects:
             x, y, w, h = obj['bbox']
             cv2.rectangle(vis, (x, y), (x+w, y+h), (0, 0, 255), 2)
-
-
-
 
 
 
