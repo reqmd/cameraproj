@@ -19,7 +19,7 @@ session_name = date.strftime("%d-%m-%Y_%H-%M-%S")
 os.makedirs(f"data/sessions/{session_name}", exist_ok=True)
  
 TH = np.array([25, 25, 25])        # пороги по каналам
-MIN_FG_PIXELS = 30                 # сколько отклонившихся пикселей в строке = "объект есть"
+MIN_FG_PIXELS = 400                 # сколько отклонившихся пикселей в строке = "объект есть"
 GAP_ROWS = 3                       # столько подряд фоновых строк = объект закончился
 MAX_ROWS = 64                    # предохранитель от бесконечного объекта
  
@@ -38,7 +38,8 @@ def read_line():
 def row_has_object(row):
     """True, если строка заметно отличается от фона."""
     diff = np.abs(row.astype(np.int16) - background)
-    fg = (diff > TH).any(axis=1)                        
+    fg = (diff > TH).any(axis=1)  
+    print(fg.sum())                      
     return fg.sum() >= MIN_FG_PIXELS
  
  
@@ -64,7 +65,7 @@ def find_obj(image, session_name, threshold=(25, 25, 25), obj_counter=[0]):
             continue
         crop = image[y:y+h, x:x+w]
         fname = f"data/sessions/{session_name}/object_{obj_counter[0]}.png"
-        cv2.imwrite(fname, crop)         
+        cv2.imwrite(fname, crop[:, :, ::-1])         
         obj_counter[0] += 1
         found += 1
     if found:
