@@ -25,10 +25,10 @@ date = datetime.datetime.now()
 session_name = date.strftime("%d-%m-%Y_%H-%M-%S")
 os.makedirs(f"data/sessions/{session_name}", exist_ok=True)
  
-TH = np.array([25, 25, 25])        # пороги по каналам
-MIN_FG_PIXELS = 700                 # сколько отклонившихся пикселей в строке = "объект есть"
+TH = np.array([45, 45, 45])        # пороги по каналам
+MIN_FG_PIXELS = 50                 # сколько отклонившихся пикселей в строке = "объект есть"
 GAP_ROWS = 3                       # столько подряд фоновых строк = объект закончился
-MAX_ROWS = 64                    # предохранитель от бесконечного объекта
+MAX_ROWS = 200                    # предохранитель от бесконечного объекта
 ALPHA = 0.01
 H, W = 164, 16
 
@@ -81,11 +81,11 @@ def row_has_object(row):
     """True, если строка заметно отличается от фона."""
     diff = np.abs(row.astype(np.int16) - background)
     fg = (diff > TH).any(axis=1)  
-    print(fg.sum())                      
+    #print(fg.sum())                      
     return fg.sum() >= MIN_FG_PIXELS
  
  
-def find_obj(image, session_name, threshold=(12, 12, 12), obj_counter=[0]):
+def find_obj(image, session_name = None, need_save = True, threshold=(25, 25, 25), obj_counter=[0]):
     """image — собранный объект (строки, ширина, 3). Выделяет и сохраняет объекты."""
     r_th, g_th, b_th = threshold
     diff = np.abs(image.astype(np.int16) - background)
@@ -96,51 +96,72 @@ def find_obj(image, session_name, threshold=(12, 12, 12), obj_counter=[0]):
                             cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
  
     n, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
-    MIN_AREA = 500
+    MIN_AREA = 1000
     found = 0
+    objects = []
     for i in range(1, n):
         x, y, w, h, area = stats[i]
         if area < MIN_AREA:
             continue
         crop = image[y:y+h, x:x+w]
-        fname = f"data/sessions/{session_name}/object_{obj_counter[0]}.png"
-        cv2.imwrite(fname, crop[:, :, ::-1])         
+        if need_save:
+            fname = f"data/sessions/{session_name}/object_{obj_counter[0]}.png"
+            cv2.imwrite(fname, crop[:, :, ::-1])
+        objects.append(crop[:, :, ::-1])       
         obj_counter[0] += 1
         found += 1
     if found:
         print("сохранено объектов:", found)
+    return objects
 
 def capture_loop():
-    collecting = False
-    obj_rows = []
-    gap = 0
-    while True:
-        try:
-            row = read_line()
-        except socket.timeout:
-            continue
+    try:
+        collecting = False
+        obj_rows = []
+        gap = 0
+        while True:
+            try:
+                row = read_line()
+            except socket.timeout:
+                continue
 
-        if row_has_object(row):
-            obj_rows.append(row); collecting = True; gap = 0
-        else:
-            if collecting:
-                gap += 1; obj_rows.append(row)
-                if gap >= GAP_ROWS:
-                    image = np.stack(obj_rows)
-                    obj_queue.put(image)   
-                    obj_rows = []; collecting = False; gap = 0
+            if row_has_object(row):
+                obj_rows.append(row); collecting = True; gap = 0
+            else:
+                if collecting:
+                    gap += 1; obj_rows.append(row)
+                    if gap >= GAP_ROWS:
+                        image = np.stack(obj_rows)
+                        obj_queue.put(image)   
+                        obj_rows = []; collecting = False; gap = 0
+    except Exception as e:
+        import traceback
+        print('Основной цикл захвата упал')
+        traceback.print_exc()
 
 def inference_loop():
-    model = SmallNet(n_classes=2)
-    model.load_state_dict(torch.load('models/model.pth')).to(device)
-    while True:
-        image = obj_queue.get()
-        objects = find_obj(image)   
-        for obj in objects:
-            print('Начало обработки')
-            cls = eval(model = model, image = val_transform(obj['crop']), device=device) 
-            print(f'Обработан объект, получен класс: {cls}')
-        obj_queue.task_done()
+    try:
+        model = SmallNet(n_classes=2)
+        model.load_state_dict(torch.load('models/model.pth', map_location=torch.device('cpu')))
+        while True:
+            image = obj_queue.get()
+            objects = find_obj(image)  
+            #print(objects) 
+            for obj in objects:
+                print('Начало обработки')
+                cls = eval(model = model, image = val_transform(obj), device=device) 
+                print(f'Обработан объект, получен класс: {cls}')
+            obj_queue.task_done()
+    except Exception as e:
+        import traceback
+        print('Inference loop упал')
+        traceback.print_exc()
 
-threading.Thread(target=capture_loop, daemon=True).start()
-threading.Thread(target=inference_loop, daemon=True).start()
+t1 = threading.Thread(target=capture_loop, daemon=True)
+t2 = threading.Thread(target=inference_loop, daemon=True)
+
+t1.start()
+t2.start()
+
+t1.join()
+t2.join()
