@@ -10,8 +10,8 @@ def find_objects(image, image_name, threshhold = [12, 12, 12], need_imshow = Tru
     H, W, _ = image.shape
     image = image[0:H, X0:X1]
     mask = np.zeros((H, W), dtype=np.uint8)
-    background = np.median(image[:20], axis=0).astype(np.int16)
-    np.save('background.npy', background)
+    background = np.median(image[:200], axis=0).astype(np.int16)
+    # np.save('background.npy', background)
     
     diff = np.abs(image.astype(np.int16) - background)    
 
@@ -24,7 +24,7 @@ def find_objects(image, image_name, threshhold = [12, 12, 12], need_imshow = Tru
 
     n, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
 
-    MIN_AREA = 500
+    MIN_AREA = 1000
     objects = []
     for i in range(1, n):                      
         x, y, w, h, area = stats[i]

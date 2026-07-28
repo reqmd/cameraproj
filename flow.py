@@ -18,10 +18,10 @@ date = datetime.datetime.now()
 session_name = date.strftime("%d-%m-%Y_%H-%M-%S")
 os.makedirs(f"data/sessions/{session_name}", exist_ok=True)
  
-TH = np.array([25, 25, 25])        # пороги по каналам
-MIN_FG_PIXELS = 700                 # сколько отклонившихся пикселей в строке = "объект есть"
+TH = np.array([45, 45, 45])        # пороги по каналам
+MIN_FG_PIXELS = 50                 # сколько отклонившихся пикселей в строке = "объект есть"
 GAP_ROWS = 3                       # столько подряд фоновых строк = объект закончился
-MAX_ROWS = 64                    # предохранитель от бесконечного объекта
+MAX_ROWS = 200                    # предохранитель от бесконечного объекта
 ALPHA = 0.01
  
 def read_line():
@@ -44,7 +44,7 @@ def row_has_object(row):
     return fg.sum() >= MIN_FG_PIXELS
  
  
-def find_obj(image, session_name, threshold=(12, 12, 12), obj_counter=[0]):
+def find_obj(image, session_name, threshold=(25, 25, 25), obj_counter=[0]):
     """image — собранный объект (строки, ширина, 3). Выделяет и сохраняет объекты."""
     r_th, g_th, b_th = threshold
     diff = np.abs(image.astype(np.int16) - background)
@@ -58,7 +58,7 @@ def find_obj(image, session_name, threshold=(12, 12, 12), obj_counter=[0]):
  
     n, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
  
-    MIN_AREA = 500
+    MIN_AREA = 1000
     found = 0
     for i in range(1, n):
         x, y, w, h, area = stats[i]
@@ -93,7 +93,7 @@ while True:
             obj_rows = []
             collecting = False
     else:
-        background = ((1 - ALPHA) * background + ALPHA * row).astype(np.int16)
+        #background = ((1 - ALPHA) * background + ALPHA * row).astype(np.int16)
         if collecting:
             gap += 1
             obj_rows.append(row)              # добавляем и фоновые строки в "хвост"
