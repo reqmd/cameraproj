@@ -1,6 +1,5 @@
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
 import os
 import cv2
 from torch.utils.data import Dataset, DataLoader
@@ -8,12 +7,16 @@ import torch.nn as nn
 from torchvision import transforms
 from sklearn.metrics import f1_score as F1
 import datetime
+import copy
+
+def get_folders(path):
+    return [item for item in os.listdir(path) if os.path.isdir(os.path.join(path, item))]
 
 class LabeledDataset(Dataset):
     def __init__(self, root, transform = None, test=False, hsv_with_rgb = False):
         self.root = root
         self.hsv_with_rgb = hsv_with_rgb
-        self.classes = os.listdir(root)
+        self.classes = get_folders(root)
         self.class_to_idx = {cls_name: idx for idx, cls_name in enumerate(self.classes)}
         self.transfrom = transform
         self.images = []
@@ -74,38 +77,44 @@ class SmallNet(nn.Module):
 def return_transforms(resolutions):
     H, W = resolutions
     train_transform = transforms.Compose([
+        transforms.ToPILImage(), 
         transforms.RandomPerspective(distortion_scale=0.1, p=0.3),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomVerticalFlip(),
         transforms.RandomRotation(30),
         transforms.Resize((H, W)),
         transforms.ToTensor(),
     ])
 
     val_transform = transforms.Compose([
+        transforms.ToPILImage(), 
         transforms.Resize((H, W)),
         transforms.ToTensor()
     ])
     return train_transform, val_transform
 
-train_data_path = 'data/data_for_nn'
-val_data_path = 'data/data_for_nn'
+train_data_path = 'data/data_for_nn/train'
+val_data_path = 'data/data_for_nn/test'
 train_transform, val_transform = return_transforms(resolutions=[164, 16])
 
 train_dataset = LabeledDataset(train_data_path, transform=train_transform)
-val_dataset = LabeledDataset(val_data_path, transform=train_transform)
+val_dataset = LabeledDataset(val_data_path, transform=val_transform)
 
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, pin_memory=True)
-val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, pin_memory=True)
+train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, pin_memory=True)
+val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False, pin_memory=True)
 
-device = 'cuda' if torch.cuda.is_available() else device = 'cpu'
+if torch.cuda.is_available():
+    device = 'cuda'
+else: 
+    device = 'cpu'
 model = SmallNet(n_classes=2).to(device)
 loss_fn = nn.CrossEntropyLoss()
 optim = torch.optim.Adam(params = model.parameters(), lr = 0.01, weight_decay=0.0001)
 epochs = 20
 date = datetime.datetime.now()
+model_path = 'models'
 formatted_string_ru = date.strftime("%d-%m-%Y_%H-%M-%S")
 model_name = f"model_{formatted_string_ru}.pth"
+
+min_loss = 100
 
 for epoch in range(epochs):
     train_loss = []
@@ -136,4 +145,8 @@ for epoch in range(epochs):
         y_pred = torch.argmax(y_pred, dim=1)
         y_preds.extend(y_pred.cpu().numpy())
     f1_sc = F1(y_trues, y_preds, average='weighted')
+    if min_loss > np.mean(test_loss):
+        min_loss = np.mean(test_loss)
+        model_to_save = copy.deepcopy(model)
     print(f'F1: {f1_sc:.6f}, Test Loss {np.mean(test_loss)}\n')
+torch.save(model.state_dict(), os.path.join(model_path, model_name))
