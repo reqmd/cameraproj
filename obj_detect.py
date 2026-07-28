@@ -3,7 +3,7 @@ import cv2
 import os
 import shutil
 
-def find_objects(image, image_name, threshhold = [25, 25, 25], need_imshow = True):
+def find_objects(image, image_name, threshhold = [12, 12, 12], need_imshow = True):
     WIDTH = 2716
     X0, X1 = 175, WIDTH - 1000
     r_th, g_th, b_th = threshhold
@@ -22,9 +22,9 @@ def find_objects(image, image_name, threshhold = [25, 25, 25], need_imshow = Tru
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN,
                             cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3)))
 
-    n, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=4)
+    n, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
 
-    MIN_AREA = 2000
+    MIN_AREA = 500
     objects = []
     for i in range(1, n):                      
         x, y, w, h, area = stats[i]

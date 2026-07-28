@@ -44,7 +44,7 @@ def row_has_object(row):
     return fg.sum() >= MIN_FG_PIXELS
  
  
-def find_obj(image, session_name, threshold=(25, 25, 25), obj_counter=[0]):
+def find_obj(image, session_name, threshold=(12, 12, 12), obj_counter=[0]):
     """image — собранный объект (строки, ширина, 3). Выделяет и сохраняет объекты."""
     r_th, g_th, b_th = threshold
     diff = np.abs(image.astype(np.int16) - background)
@@ -58,7 +58,7 @@ def find_obj(image, session_name, threshold=(25, 25, 25), obj_counter=[0]):
  
     n, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
  
-    MIN_AREA = 1000
+    MIN_AREA = 500
     found = 0
     for i in range(1, n):
         x, y, w, h, area = stats[i]
