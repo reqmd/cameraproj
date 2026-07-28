@@ -58,7 +58,7 @@ def find_obj(image, session_name, threshold=(25, 25, 25), obj_counter=[0]):
  
     n, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
  
-    MIN_AREA = 2000
+    MIN_AREA = 1000
     found = 0
     for i in range(1, n):
         x, y, w, h, area = stats[i]
@@ -82,8 +82,8 @@ while True:
     try:
         row = read_line()
     except socket.timeout:
-        continue
         print('ВНИМАНИЕ! ДОЛГИЙ ОТКЛИК ОТ КАМЕРЫ!')
+        continue 
  
     if row_has_object(row):
         obj_rows.append(row)
