@@ -129,7 +129,7 @@ def capture_loop():
 
             if row_has_object(row):
                 if not collecting:
-                    t_start = time.perf_counter()      # ← первая строка объекта
+                    t_start = time.perf_counter()
                 obj_rows.append(row); collecting = True; gap = 0
             else:
                 if collecting:
@@ -139,9 +139,9 @@ def capture_loop():
                         image = np.stack(obj_rows)
                         t_assembled = time.perf_counter()
 
-                        print(f"[capture] сбор строк: "
-                              f"{(t_before_stack - t_start)*1000:.4f} мс, "
-                              f"np.stack: {(t_assembled - t_before_stack)*1000:.4f} мс")
+                        print(f"[capture] сбор: {(t_assembled - t_start)*1000:.1f} мс, "
+                              f"строк: {len(obj_rows)}, "
+                              f"мс/строку: {(t_assembled - t_start)*1000/len(obj_rows):.1f}")
 
                         obj_queue.put(image)
                         obj_rows = []; collecting = False; gap = 0
