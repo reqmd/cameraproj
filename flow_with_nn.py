@@ -25,7 +25,8 @@ background = np.load('background.npy').astype(np.int16)
 date = datetime.datetime.now()
 session_name = date.strftime("%d-%m-%Y_%H-%M-%S")
 os.makedirs(f"data/sessions/{session_name}", exist_ok=True)
- 
+timeout_count = [0]
+
 TH = np.array([45, 45, 45])        # пороги по каналам
 MIN_FG_PIXELS = 50                 # сколько отклонившихся пикселей в строке = "объект есть"
 GAP_ROWS = 3                       # столько подряд фоновых строк = объект закончился
@@ -70,7 +71,11 @@ def read_line():
     strings = []
     sock.sendto(cmd, (CAMERA_IP, CAMERA_PORT))
     for _ in range(12):
-        data, _ = sock.recvfrom(65535)
+        try:
+            data, _ = sock.recvfrom(65535)
+        except socket.timeout:
+            timeout_count[0] +=1
+            raise
         vals = np.frombuffer(data[12:-2], dtype='>u2')
         bright = (vals / 64).clip(0, 255).astype(np.uint8)
         strings.extend(bright)
@@ -141,7 +146,9 @@ def capture_loop():
 
                         print(f"[capture] сбор: {(t_assembled - t_start)*1000:.1f} мс, "
                               f"строк: {len(obj_rows)}, "
-                              f"мс/строку: {(t_assembled - t_start)*1000/len(obj_rows):.1f}")
+                              f"мс/строку: {(t_assembled - t_start)*1000/len(obj_rows):.1f}"
+                              f"Количество таймаутов: {timeout_count}")
+                            
 
                         obj_queue.put(image)
                         obj_rows = []; collecting = False; gap = 0
