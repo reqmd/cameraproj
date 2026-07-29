@@ -9,6 +9,7 @@ import os
 from test import eval
 import torch
 from torchvision import transforms
+import time
 
 CAMERA_IP   = "192.168.2.101"
 CAMERA_PORT = 5001
@@ -119,6 +120,7 @@ def capture_loop():
         collecting = False
         obj_rows = []
         gap = 0
+        t_start = None
         while True:
             try:
                 row = read_line()
@@ -126,15 +128,24 @@ def capture_loop():
                 continue
 
             if row_has_object(row):
+                if not collecting:
+                    t_start = time.perf_counter()      # ← первая строка объекта
                 obj_rows.append(row); collecting = True; gap = 0
             else:
                 if collecting:
                     gap += 1; obj_rows.append(row)
                     if gap >= GAP_ROWS:
+                        t_before_stack = time.perf_counter()
                         image = np.stack(obj_rows)
-                        obj_queue.put(image)   
+                        t_assembled = time.perf_counter()
+
+                        print(f"[capture] сбор строк: "
+                              f"{(t_before_stack - t_start)*1000:.4f} мс, "
+                              f"np.stack: {(t_assembled - t_before_stack)*1000:.4f} мс")
+
+                        obj_queue.put(image)
                         obj_rows = []; collecting = False; gap = 0
-    except Exception as e:
+    except Exception:
         import traceback
         print('Основной цикл захвата упал')
         traceback.print_exc()
@@ -142,17 +153,23 @@ def capture_loop():
 def inference_loop():
     try:
         model = SmallNet(n_classes=2)
-        model.load_state_dict(torch.load('models/model.pth', map_location=torch.device('cpu')))
+        model.load_state_dict(torch.load('models/model.pth', map_location='cpu'))
         while True:
             image = obj_queue.get()
-            objects = find_obj(image)  
-            #print(objects) 
+            t0 = time.perf_counter()
+
+            objects = find_obj(image)
+            t1 = time.perf_counter()
+
             for obj in objects:
-                print('Начало обработки')
-                cls = eval(model = model, image = val_transform(obj), device=device) 
-                print(f'Обработан объект, получен класс: {cls}')
+                cls = eval(model=model, image=val_transform(obj), device=device)
+            t2 = time.perf_counter()
+
+            print(f"[infer] выделение (find_obj): {(t1-t0)*1000:.4f} мс, "
+                  f"нейросеть ({len(objects)} об.): {(t2-t1)*1000:.4f} мс, "
+                  f"итого цикл: {(t2-t0)*1000:.4f} мс")
             obj_queue.task_done()
-    except Exception as e:
+    except Exception:
         import traceback
         print('Inference loop упал')
         traceback.print_exc()
