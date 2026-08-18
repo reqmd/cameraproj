@@ -18,10 +18,10 @@ date = datetime.datetime.now()
 session_name = date.strftime("%d-%m-%Y_%H-%M-%S")
 os.makedirs(f"data/sessions/{session_name}", exist_ok=True)
  
-TH = np.array([45, 45, 45])        # пороги по каналам
-MIN_FG_PIXELS = 50                 # сколько отклонившихся пикселей в строке = "объект есть"
+TH = np.array([60, 60, 60])        # пороги по каналам
+MIN_FG_PIXELS = 200                 # сколько отклонившихся пикселей в строке = "объект есть"
 GAP_ROWS = 3                       # столько подряд фоновых строк = объект закончился
-MAX_ROWS = 200                    # предохранитель от бесконечного объекта
+MAX_ROWS = 400                    # предохранитель от бесконечного объекта
 ALPHA = 0.01
  
 def read_line():
