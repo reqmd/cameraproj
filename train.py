@@ -150,3 +150,14 @@ for epoch in range(epochs):
         model_to_save = copy.deepcopy(model)
     print(f'F1: {f1_sc:.6f}, Test Loss {np.mean(test_loss)}\n')
 torch.save(model.state_dict(), os.path.join(model_path, model_name))
+if not os.path.exists('onnx'):
+    os.mkdir('onnx')
+
+model_to_save.eval()
+model_to_save.cpu()
+
+dummy_input = torch.randn(1, 3, 164, 16)
+
+onnx_path = os.path.join('onnx' f"model_{formatted_string_ru}.onnx")
+torch.onnx.export(model_to_save, dummy_input, onnx_path, input_names=['input'], output_names=['output'], opset_version=12, dynamic_axes=None)
+print("ONNX сохранён:", onnx_path)
