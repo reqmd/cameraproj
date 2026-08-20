@@ -7,6 +7,7 @@ import cv2
 import datetime
 import os
 from test import eval
+from rknn import inference_rknn
 import torch
 from torchvision import transforms
 import time
@@ -157,7 +158,7 @@ def capture_loop():
         print('Основной цикл захвата упал')
         traceback.print_exc()
 
-def inference_loop():
+def inference_loop(rknn_work = False):
     try:
         model = SmallNet(n_classes=2)
         model.load_state_dict(torch.load('models/model.pth', map_location='cpu'))
@@ -169,12 +170,15 @@ def inference_loop():
             t1 = time.perf_counter()
 
             for obj in objects:
-                cls = eval(model=model, image=val_transform(obj), device=device)
+                if rknn_work:
+                    cls = inference_rknn(imag=val_transform(obj))
+                else:
+                    cls = eval(model=model, image=val_transform(obj), device=device)
             t2 = time.perf_counter()
-
-            print(f"[infer] выделение (find_obj): {(t1-t0)*1000:.4f} мс, "
-                  f"нейросеть ({len(objects)} об.): {(t2-t1)*1000:.4f} мс, "
-                  f"итого цикл: {(t2-t0)*1000:.4f} мс")
+            print(f'Класс объекта: {cls}')
+            print(f"[infer] выделение (find_obj): {(t1-t0)*1000:.6f} мс, "
+                  f"нейросеть ({len(objects)} об.): {(t2-t1)*1000:.6f} мс, "
+                  f"итого цикл: {(t2-t0)*1000:.6f} мс")
             obj_queue.task_done()
     except Exception:
         import traceback

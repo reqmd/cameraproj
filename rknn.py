@@ -56,19 +56,14 @@ def convert_in_rknn():
     print('готово:', RKNN_PATH)
     rknn.release()
 
-def inference_rknn():
+def inference_rknn(img, classes = {0:'Скрепка', 1:'Зерно'}):
     rknn = RKNNLite()
     rknn.load_rknn('model.rknn')                  # загрузить сконвертированную модель
     rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0)   # инициализировать NPU
 
-    # подготовка входа:
-    img = cv2.imread('object.png')                # BGR
-    img = cv2.resize(img, (16, 164))              # (W, H) — под твой вход 164x16!
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)    # если модель обучалась на RGB
-
     # инференс:
     outputs = rknn.inference(inputs=[img])
     pred = np.argmax(outputs[0])
-    print('класс:', pred)
+    print('класс:', classes[pred])
 
     rknn.release()

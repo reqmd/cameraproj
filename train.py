@@ -8,6 +8,7 @@ from torchvision import transforms
 from sklearn.metrics import f1_score as F1
 import datetime
 import copy
+import yaml
 
 def get_folders(path):
     return [item for item in os.listdir(path) if os.path.isdir(os.path.join(path, item))]
@@ -149,9 +150,14 @@ for epoch in range(epochs):
         min_loss = np.mean(test_loss)
         model_to_save = copy.deepcopy(model)
     print(f'F1: {f1_sc:.6f}, Test Loss {np.mean(test_loss)}\n')
-torch.save(model.state_dict(), os.path.join(model_path, model_name))
+torch_path = os.path.join(model_path, model_name)
+torch.save(model.state_dict(), torch_path)
+
 if not os.path.exists('onnx'):
     os.mkdir('onnx')
+
+if not os.path.exists('rknn'):
+    os.mkdir('rknn')
 
 model_to_save.eval()
 model_to_save.cpu()
@@ -159,5 +165,9 @@ model_to_save.cpu()
 dummy_input = torch.randn(1, 3, 164, 16)
 
 onnx_path = os.path.join('onnx' f"model_{formatted_string_ru}.onnx")
+rknn_path = os.path.join('onnx' f"model_{formatted_string_ru}.rknn")
+models = {'torch':torch_path, 'onnx':onnx_path, 'rknn':rknn_path}
 torch.onnx.export(model_to_save, dummy_input, onnx_path, input_names=['input'], output_names=['output'], opset_version=12, dynamic_axes=None)
 print("ONNX сохранён:", onnx_path)
+with open ('models.yaml', 'w') as file:
+    yaml.safe_dump(models)
