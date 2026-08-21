@@ -1,1 +1,3 @@
-models:
+onnx: onnx/model_20-08-2026_14-02-08.onnx
+rknn: rknn/model_20-08-2026_14-02-08.rknn
+torch: models/model_20-08-2026_14-02-08.pth

@@ -164,10 +164,10 @@ model_to_save.cpu()
 
 dummy_input = torch.randn(1, 3, 164, 16)
 
-onnx_path = os.path.join('onnx' f"model_{formatted_string_ru}.onnx")
-rknn_path = os.path.join('onnx' f"model_{formatted_string_ru}.rknn")
-models = {'torch':torch_path, 'onnx':onnx_path, 'rknn':rknn_path}
+onnx_path = os.path.join('onnx', f"model_{formatted_string_ru}.onnx")
+rknn_path = os.path.join('rknn', f"model_{formatted_string_ru}.rknn")
+models_info = {'torch':torch_path, 'onnx':onnx_path, 'rknn':rknn_path}
 torch.onnx.export(model_to_save, dummy_input, onnx_path, input_names=['input'], output_names=['output'], opset_version=12, dynamic_axes=None)
 print("ONNX сохранён:", onnx_path)
 with open ('models.yaml', 'w') as file:
-    yaml.safe_dump(models)
+    yaml.dump(models_info, file, allow_unicode = True)

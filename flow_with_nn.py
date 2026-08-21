@@ -7,10 +7,56 @@ import cv2
 import datetime
 import os
 from test import eval
-from rknn import inference_rknn
 import torch
 from torchvision import transforms
 import time
+from rknnlite.api import RKNNLite
+import yaml
+
+with open ('models.yaml', 'r') as file:
+    data = yaml.safe_load(file)
+    RKNN_PATH = data['rknn']
+
+def inference_rknn(img, rknn_path, classes = {0:'Скрепка', 1:'Зерно'}):
+    rknn = RKNNLite()
+    rknn.load_rknn(rknn_path)                  # загрузить сконвертированную модель
+    rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0)   # инициализировать NPU
+    img = cv2.resize(img, (16, 164))
+    img = np.expand_dims(img, axis = 0)
+    print(type(img), img.shape if hasattr(img, 'shape') else 'нет shape', img.dtype if hasattr(img, 'dtype') else '')
+    outputs = rknn.inference(inputs=[img])
+    pred = np.argmax(outputs[0])
+    print('класс:', classes[pred])
+    rknn.release()
+    
+def read_line():
+    strings = []
+    sock.sendto(cmd, (CAMERA_IP, CAMERA_PORT))
+    for _ in range(12):
+        try:
+            data, _ = sock.recvfrom(65535)
+        except socket.timeout:
+            timeout_count[0] +=1
+            raise
+        vals = np.frombuffer(data[12:-2], dtype='>u2')
+        bright = (vals / 64).clip(0, 255).astype(np.uint8)
+        strings.extend(bright)
+    rgb = np.array(strings, dtype=np.uint8).reshape(-1, 3)
+    return rgb[X0:X1]    
+
+def collect_background(n_lines=20):
+    """Собрать фон из первых n_lines строк (лента должна быть пустой)."""
+    print(f"калибровка фона: собираю {n_lines} строк, лента должна быть пустой...")
+    rows = []
+    while len(rows) < n_lines:
+        try:
+            row = read_line()
+        except socket.timeout:
+            continue
+        rows.append(row)
+    bg = np.median(np.stack(rows), axis=0).astype(np.int16)   # (ширина, 3)
+    print("фон собран, форма:", bg.shape)
+    return bg
 
 CAMERA_IP   = "192.168.2.101"
 CAMERA_PORT = 5001
@@ -21,8 +67,9 @@ obj_queue = queue.Queue(maxsize=20)
 cmd = bytes.fromhex("01 00 03 00 00 00 6A 00 00 1F D4 8e 06")
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.settimeout(0.1)
-background = np.load('background.npy').astype(np.int16)
- 
+
+background = collect_background(20)   # вместо np.load('background.npy') 
+print('Фон собран!')
 date = datetime.datetime.now()
 session_name = date.strftime("%d-%m-%Y_%H-%M-%S")
 os.makedirs(f"data/sessions/{session_name}", exist_ok=True)
@@ -67,22 +114,6 @@ class SmallNet(nn.Module):
     def forward(self, x):
         x = self.features(x).flatten(1)
         return self.head(x)
-
-def read_line():
-    strings = []
-    sock.sendto(cmd, (CAMERA_IP, CAMERA_PORT))
-    for _ in range(12):
-        try:
-            data, _ = sock.recvfrom(65535)
-        except socket.timeout:
-            timeout_count[0] +=1
-            raise
-        vals = np.frombuffer(data[12:-2], dtype='>u2')
-        bright = (vals / 64).clip(0, 255).astype(np.uint8)
-        strings.extend(bright)
-    rgb = np.array(strings, dtype=np.uint8).reshape(-1, 3)
-    return rgb[X0:X1]
- 
  
 def row_has_object(row):
     """True, если строка заметно отличается от фона."""
@@ -158,7 +189,7 @@ def capture_loop():
         print('Основной цикл захвата упал')
         traceback.print_exc()
 
-def inference_loop(rknn_work = False):
+def inference_loop(rknn_work = True):
     try:
         model = SmallNet(n_classes=2)
         model.load_state_dict(torch.load('models/model.pth', map_location='cpu'))
@@ -171,7 +202,7 @@ def inference_loop(rknn_work = False):
 
             for obj in objects:
                 if rknn_work:
-                    cls = inference_rknn(imag=val_transform(obj))
+                    cls = inference_rknn(img = obj, rknn_path = RKNN_PATH)
                 else:
                     cls = eval(model=model, image=val_transform(obj), device=device)
             t2 = time.perf_counter()
