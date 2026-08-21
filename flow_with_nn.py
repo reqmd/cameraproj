@@ -21,8 +21,6 @@ def inference_rknn(img, rknn_path, classes = {0:'Скрепка', 1:'Зерно'
     rknn = RKNNLite()
     rknn.load_rknn(rknn_path)                  # загрузить сконвертированную модель
     rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0)   # инициализировать NPU
-    img = cv2.resize(img, (16, 164))
-    img = np.expand_dims(img, axis = 0)
     print(type(img), img.shape if hasattr(img, 'shape') else 'нет shape', img.dtype if hasattr(img, 'dtype') else '')
     outputs = rknn.inference(inputs=[img])
     pred = np.argmax(outputs[0])
@@ -76,7 +74,7 @@ os.makedirs(f"data/sessions/{session_name}", exist_ok=True)
 timeout_count = [0]
 
 TH = np.array([60, 60, 60])        # пороги по каналам
-MIN_FG_PIXELS = 200                 # сколько отклонившихся пикселей в строке = "объект есть"
+MIN_FG_PIXELS = 50                 # сколько отклонившихся пикселей в строке = "объект есть"
 GAP_ROWS = 3                       # столько подряд фоновых строк = объект закончился
 MAX_ROWS = 400                    # предохранитель от бесконечного объекта
 ALPHA = 0.01
@@ -145,6 +143,7 @@ def find_obj(image, session_name = None, need_save = True, threshold=(25, 25, 25
         if need_save:
             fname = f"data/sessions/{session_name}/object_{obj_counter[0]}.png"
             cv2.imwrite(fname, crop[:, :, ::-1])
+            print('Сохранен объект', fname)
         objects.append(crop[:, :, ::-1])       
         obj_counter[0] += 1
         found += 1
@@ -197,19 +196,24 @@ def inference_loop(rknn_work = True):
             image = obj_queue.get()
             t0 = time.perf_counter()
 
-            objects = find_obj(image)
+            objects = find_obj(image, session_name = session_name, need_save = True)
             t1 = time.perf_counter()
 
             for obj in objects:
                 if rknn_work:
-                    cls = inference_rknn(img = obj, rknn_path = RKNN_PATH)
+                  img = cv2.resize(obj, (16, 164))
+                  img = np.expand_dims(img, axis = 0)
+                  t3 = time.perf_counter()
+                  cls = inference_rknn(img = img, rknn_path = RKNN_PATH)
+                  t4 = time.perf_counter()
                 else:
                     cls = eval(model=model, image=val_transform(obj), device=device)
             t2 = time.perf_counter()
             print(f'Класс объекта: {cls}')
             print(f"[infer] выделение (find_obj): {(t1-t0)*1000:.6f} мс, "
-                  f"нейросеть ({len(objects)} об.): {(t2-t1)*1000:.6f} мс, "
+                  f"нейросеть ({len(objects)} об.): {(t4-t3)*1000:.6f} мс, "
                   f"итого цикл: {(t2-t0)*1000:.6f} мс")
+            print('/' * 100)
             obj_queue.task_done()
     except Exception:
         import traceback
